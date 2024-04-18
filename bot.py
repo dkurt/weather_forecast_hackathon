@@ -50,14 +50,17 @@ def start_message(message):
 
 @bot.message_handler(commands=['team'])
 def process_team_name(message):
-    team_name = message.text[message.text.find(" ") + 1:]
     chat_id = message.chat.id
+    if chat_id in chat_id_team:
+        bot.send_message(chat_id, f"Команда уже выбрана: {chat_id_team[chat_id]}")
+        return
+
+    team_name = message.text[message.text.find(" ") + 1:]
     apihelper.unpin_all_chat_messages(args.token, chat_id=chat_id)
     apihelper.pin_chat_message(args.token, chat_id=chat_id, message_id=message.id)
     chat_id_team[chat_id] = team_name
     with open("teams.txt", "at") as f:
         f.write(f"{chat_id} {team_name}\n")
-
 
 @bot.message_handler(commands=['leaderboard'])
 def print_leaderboard(message):
