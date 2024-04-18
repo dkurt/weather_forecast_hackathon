@@ -27,6 +27,11 @@ chat_id_team = {}
 submissions = {}
 leaderboard = {}
 
+if os.path.exists("teams.txt"):
+    with open("teams.txt", "rt") as f:
+        for line in f.readlines():
+            chat_id_team[int(line[:line.find(" ")])] = line[line.find(" ") + 1:].strip()
+
 if os.path.exists("submissions.txt"):
     with open("submissions.txt", "rt") as f:
         for line in f.readlines():
@@ -39,7 +44,7 @@ if os.path.exists("submissions.txt"):
 @bot.message_handler(commands=['start'])
 def start_message(message):
     chat_id = int(message.chat.id)
-    welcome_message = "Напишите название команды новым сообщением в виде\n/team НАЗВАНИЕ"
+    welcome_message = "Напишите название команды новым сообщением в виде\n/team НАЗВАНИЕ\n\nДля просмотра доски результатов, отправьте /leaderboard"
     bot.send_message(chat_id, welcome_message)
 
 
@@ -50,6 +55,8 @@ def process_team_name(message):
     apihelper.unpin_all_chat_messages(args.token, chat_id=chat_id)
     apihelper.pin_chat_message(args.token, chat_id=chat_id, message_id=message.id)
     chat_id_team[chat_id] = team_name
+    with open("teams.txt", "at") as f:
+        f.write(f"{chat_id} {team_name}\n")
 
 
 @bot.message_handler(commands=['leaderboard'])
