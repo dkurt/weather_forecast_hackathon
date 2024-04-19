@@ -56,7 +56,6 @@ def process_team_name(message):
         return
 
     team_name = message.text[message.text.find(" ") + 1:]
-    apihelper.unpin_all_chat_messages(args.token, chat_id=chat_id)
     apihelper.pin_chat_message(args.token, chat_id=chat_id, message_id=message.id)
     chat_id_team[chat_id] = team_name
     with open("teams.txt", "at") as f:
@@ -64,6 +63,8 @@ def process_team_name(message):
 
 @bot.message_handler(commands=['leaderboard'])
 def print_leaderboard(message):
+    if len(leaderboard) == 0:
+        return
     resp = []
     for i, (team_name, score) in enumerate(sorted(leaderboard.items(), key=lambda x:x[1])):
         resp.append(f"{i + 1}. {score:.4f} - {team_name  }")
@@ -73,6 +74,10 @@ def print_leaderboard(message):
 @bot.message_handler(content_types=['document'])
 def process_solution(message):
     chat_id = message.chat.id
+
+    if not message.document.file_name.endswith(".csv"):
+        bot.send_message(chat_id, "Ожидается .csv файл")
+        return
 
     if not chat_id in chat_id_team:
         bot.send_message(chat_id, "Требуется указать название команды в виде сообщения:\n/team НАЗВАНИЕ")
@@ -84,7 +89,12 @@ def process_solution(message):
     file = bot.get_file(file_id)
     data = bot.download_file(file.file_path)
 
-    data = pd.read_csv(io.StringIO(data.decode("utf-8")))
+    try:
+        data = pd.read_csv(io.StringIO(data.decode("utf-8")))
+    except:
+        bot.send_message(chat_id, "Ошибка при чтении файла")
+        return
+
     if len(data) != 4500:
         bot.send_message(chat_id, f"Требуется 4500 строк, в файле {document.file_name} только {len(data)} строк")
 
