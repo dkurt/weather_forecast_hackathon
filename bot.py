@@ -9,7 +9,8 @@ import sklearn.metrics
 
 def compute_score(solution: pd.DataFrame, submission: pd.DataFrame, row_id_column_name = "ID") -> float:
     del submission[row_id_column_name]
-    return sklearn.metrics.mean_absolute_percentage_error(solution, submission)
+    return sklearn.metrics.mean_absolute_percentage_error(solution, submission), \
+           sklearn.metrics.mean_absolute_percentage_error(solution, submission, multioutput="raw_values")
 
 
 parser = argparse.ArgumentParser()
@@ -53,6 +54,9 @@ def process_team_name(message):
     chat_id = message.chat.id
     if chat_id in chat_id_team:
         bot.send_message(chat_id, f"Команда уже выбрана: {chat_id_team[chat_id]}")
+        return
+
+    if message.text.find(" ") == -1:
         return
 
     team_name = message.text[message.text.find(" ") + 1:]
@@ -102,13 +106,18 @@ def process_solution(message):
     if len(data.columns) != len(columns) or any(data.columns != columns):
         bot.send_message(chat_id, f"Ожидаемые столбцы: {columns}")
 
-    score = compute_score(solution, data)
+    try:
+        score, score_per_value = compute_score(solution, data)
+    except Exception as ex:
+        bot.send_message(chat_id, str(ex))
+        return
 
     submissions[team_name] = submissions.get(team_name, []) + [score]
     leaderboard[team_name] = min(score, leaderboard.get(team_name, score))
     with open("submissions.txt", "at") as f:
         f.write(f"{team_name} {score}\n")
 
-    bot.send_message(chat_id, f"Оценка MAPE для {document.file_name}: {score} (меньше - лучше)")
+    score_per_value = "\n".join(f"{name}: {value}" for name, value in zip(data.columns, score_per_value))
+    bot.send_message(chat_id, f"Оценка MAPE для {document.file_name}: {score} (меньше - лучше).\n\nОшибка отдельно по значениям:\n{score_per_value}")
 
 bot.polling()
